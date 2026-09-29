@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* ── Dark mode: class-based (.dark on <html>) ── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ════════════════════════════════════════════════
+   BASE LAYER
+════════════════════════════════════════════════ */
+@layer base {
+  :root {
+    /* Safe-area insets for notched/punch-hole phones */
+    --safe-top:    env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left:   env(safe-area-inset-left, 0px);
+    --safe-right:  env(safe-area-inset-right, 0px);
+
+    /* Bottom nav height */
+    --nav-height: 60px;
+
+    /* Chart grid colours */
+    --chart-grid: #e2e8f0;
+  }
+
+  .dark {
+    --chart-grid: #334155;
+  }
+
+  /* ── Reset ── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    /* Prevent iOS font-size bump on rotation */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Smooth scroll across the board */
+    scroll-behavior: smooth;
+    /* Use Poppins; fall back gracefully when offline */
+    font-family:
+      'Poppins',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+  }
+
+  body {
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100;
+    /* No bounce-scroll on iOS */
+    overscroll-behavior: none;
+    /* Momentum scroll on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent horizontal overflow from any child */
+    overflow-x: hidden;
+    min-height: 100dvh;
+  }
+
+  /* Root flex column so pages fill the screen */
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Consistent focus ring */
+  :focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+  }
+
+  /* Custom scrollbar (Webkit) */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
+  .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+}
+
+/* ════════════════════════════════════════════════
+   UTILITY LAYER
+════════════════════════════════════════════════ */
+@layer utilities {
+  /* ── Safe-area padding helpers ── */
+  .pt-safe  { padding-top:    var(--safe-top); }
+  .pb-safe  { padding-bottom: var(--safe-bottom); }
+  .pl-safe  { padding-left:   var(--safe-left); }
+  .pr-safe  { padding-right:  var(--safe-right); }
+
+  /* Main content: pushed down by header + up by bottom nav */
+  .pb-nav {
+    padding-bottom: calc(var(--nav-height) + max(0.75rem, var(--safe-bottom)));
+  }
+
+  /* Checkbox pop animation */
+  .animate-check {
+    animation: checkPop 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Page slide-in on route change */
+  .page-enter {
+    animation: pageFade 0.2s ease-out both;
+  }
+}
+
+/* ════════════════════════════════════════════════
+   KEYFRAMES
+════════════════════════════════════════════════ */
+@keyframes checkPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.25); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

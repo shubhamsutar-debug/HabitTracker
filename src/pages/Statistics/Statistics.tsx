@@ -1,8 +1,5 @@
 import { useMemo } from 'react'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
 import { useHabits } from '../../hooks/useHabits'
 import { useAllLogs } from '../../hooks/useHabitLogs'
 import { useStatistics } from '../../hooks/useStatistics'
@@ -10,212 +7,132 @@ import { Header } from '../../components/Header'
 import { EmptyState } from '../../components/EmptyState'
 import { shortDate } from '../../utils/dates'
 
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: boolean }) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex flex-col gap-1">
-      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{label}</p>
-      <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
-      {sub && <p className="text-xs text-slate-400 dark:text-slate-500">{sub}</p>}
+    <div style={{
+      background: 'var(--c-card)', border: '1px solid var(--c-border)',
+      borderRadius: 14, padding: '16px 18px',
+      boxShadow: 'var(--shadow-card)',
+      display: 'flex', flexDirection: 'column', gap: 4,
+    }}>
+      <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--c-text-secondary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</p>
+      <p style={{ fontSize: 28, fontWeight: 700, color: accent ? 'var(--c-primary)' : 'var(--c-text)', margin: 0, lineHeight: 1.1 }}>{value}</p>
+      {sub && <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: 0 }}>{sub}</p>}
     </div>
   )
 }
 
-// Custom tooltip for charts
-function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
+function ChartTip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 shadow-lg text-xs">
-      <p className="font-medium text-slate-700 dark:text-slate-200">{label}</p>
-      <p className="text-indigo-600 dark:text-indigo-400 font-bold">{payload[0].value}%</p>
+    <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 10, padding: '8px 12px', boxShadow: 'var(--shadow-md)', fontSize: 12 }}>
+      <p style={{ color: 'var(--c-text-secondary)', margin: '0 0 2px' }}>{label}</p>
+      <p style={{ color: 'var(--c-primary)', fontWeight: 700, margin: 0 }}>{payload[0].value}%</p>
     </div>
   )
 }
 
 export function Statistics() {
-  const { habits, loading: habitsLoading } = useHabits()
-  const { logs, loading: logsLoading } = useAllLogs()
+  const { habits, loading: hl } = useHabits()
+  const { logs, loading: ll } = useAllLogs()
   const stats = useStatistics(habits, logs)
 
-  const last7Data = useMemo(
-    () =>
-      stats.last7Days.map((d) => ({
-        name: shortDate(d.date),
-        pct: d.percentage,
-      })),
-    [stats.last7Days],
+  const last7 = useMemo(() => stats.last7Days.map(d => ({ name: shortDate(d.date), pct: d.percentage })), [stats.last7Days])
+  const last30 = useMemo(() => stats.last30Days.map(d => ({ name: shortDate(d.date), pct: d.percentage })), [stats.last30Days])
+
+  const activeHabits = habits.filter(h => h.active && !h.archivedAt)
+
+  if (hl || ll) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 32, height: 32, border: '3px solid var(--c-primary-light)', borderTopColor: 'var(--c-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
   )
 
-  const last30Data = useMemo(
-    () =>
-      stats.last30Days.map((d) => ({
-        name: shortDate(d.date),
-        pct: d.percentage,
-      })),
-    [stats.last30Days],
+  if (activeHabits.length === 0) return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Header title="Statistics" />
+      <EmptyState icon="📊" title="No data yet." description="Add habits and start tracking to see your statistics." />
+    </div>
   )
-
-  if (habitsLoading || logsLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  const activeHabits = habits.filter((h) => h.active && !h.archivedAt)
-
-  if (activeHabits.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col">
-        <Header title="Statistics" />
-        <EmptyState
-          icon="📊"
-          title="No data yet."
-          description="Add habits and start tracking to see your statistics."
-        />
-      </div>
-    )
-  }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <Header title="Statistics" />
+      <div style={{ flex: 1, padding: '20px 16px', maxWidth: 760, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }} className="pb-nav">
 
-      <div className="flex-1 px-4 pt-4 pb-nav max-w-2xl mx-auto w-full space-y-5">
-        {/* Overview cards */}
+        {/* Overview */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-            Overview
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard
-              label="Overall completion"
-              value={`${stats.overallPercentage}%`}
-            />
-            <StatCard
-              label="Total completed"
-              value={stats.totalCompleted}
-            />
-            <StatCard
-              label="Current streak"
-              value={`🔥 ${stats.currentStreak.current}`}
-              sub="consecutive days"
-            />
-            <StatCard
-              label="Best streak"
-              value={`🏆 ${stats.currentStreak.best}`}
-              sub="consecutive days"
-            />
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>Overview</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
+            <StatCard label="Overall" value={`${stats.overallPercentage}%`} accent />
+            <StatCard label="Total Done" value={stats.totalCompleted} />
+            <StatCard label="Current Streak" value={`🔥 ${stats.currentStreak.current}`} sub="days in a row" />
+            <StatCard label="Best Streak" value={`🏆 ${stats.currentStreak.best}`} sub="all time" />
           </div>
         </div>
 
-        {/* Last 7 days bar chart */}
-        {last7Data.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-4">
-              Last 7 Days
-            </p>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={last7Data} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e2e8f0)" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,102,241,0.05)' }} />
-                <Bar dataKey="pct" fill="#6366f1" radius={[4, 4, 0, 0]} />
+        {/* Last 7 days */}
+        {last7.length > 0 && (
+          <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 14, padding: '16px 16px 12px', boxShadow: 'var(--shadow-card)' }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)', margin: '0 0 14px' }}>Last 7 Days</p>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={last7} margin={{ top: 0, right: 0, bottom: 0, left: -24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--c-text-secondary)', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--c-text-secondary)', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--c-primary-light)' }} />
+                <Bar dataKey="pct" fill="#2E7D5B" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
 
-        {/* Last 30 days line chart */}
-        {last30Data.length > 1 && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-4">
-              Last 30 Days
-            </p>
-            <ResponsiveContainer width="100%" height={160}>
-              <LineChart data={last30Data} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #e2e8f0)" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 9, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={4}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 10, fill: '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<ChartTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="pct"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4, fill: '#6366f1' }}
-                />
+        {/* Last 30 days */}
+        {last30.length > 1 && (
+          <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 14, padding: '16px 16px 12px', boxShadow: 'var(--shadow-card)' }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)', margin: '0 0 14px' }}>Last 30 Days</p>
+            <ResponsiveContainer width="100%" height={150}>
+              <LineChart data={last30} margin={{ top: 0, right: 0, bottom: 0, left: -24 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: 'var(--c-text-secondary)', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} interval={4} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--c-text-secondary)', fontFamily: 'Poppins' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip />} />
+                <Line type="monotone" dataKey="pct" stroke="#2E7D5B" strokeWidth={2.5} dot={false} activeDot={{ r: 4, fill: '#2E7D5B', strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
 
-        {/* Per-habit breakdown */}
+        {/* Per-habit */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-            Habit Performance
-          </p>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {stats.habitStats
-              .sort((a, b) => b.percentage - a.percentage)
-              .map((hs, idx, arr) => (
-                <div
-                  key={hs.habitId}
-                  className={`px-4 py-3.5 ${idx < arr.length - 1 ? 'border-b border-slate-100 dark:border-slate-700/60' : ''}`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-lg flex-shrink-0" aria-hidden="true">{hs.emoji}</span>
-                    <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-                      {hs.name}
-                    </span>
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-                      {hs.percentage}%
-                    </span>
-                  </div>
-                  {/* Mini progress bar */}
-                  <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                      style={{ width: `${hs.percentage}%` }}
-                    />
-                  </div>
-                  {/* Streak badges */}
-                  <div className="flex gap-3 mt-2">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      🔥 Streak: <span className="font-medium text-slate-700 dark:text-slate-300">{hs.streak.current}</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      🏆 Best: <span className="font-medium text-slate-700 dark:text-slate-300">{hs.streak.best}</span>
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      ✓ {hs.completedDays} / {hs.totalDays} days
-                    </span>
-                  </div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>Habit Performance</p>
+          <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+            {stats.habitStats.sort((a, b) => b.percentage - a.percentage).map((hs, idx, arr) => (
+              <div key={hs.habitId} style={{ padding: '14px 16px', borderBottom: idx < arr.length - 1 ? '1px solid var(--c-border)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }} aria-hidden="true">{hs.emoji}</span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hs.name}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-primary)', flexShrink: 0 }}>{hs.percentage}%</span>
                 </div>
-              ))}
+                {/* Bar */}
+                <div style={{ height: 6, background: 'var(--c-primary-light)', borderRadius: 999, overflow: 'hidden', marginBottom: 8 }}>
+                  <div style={{ height: '100%', width: `${hs.percentage}%`, background: 'var(--c-primary)', borderRadius: 999, transition: 'width 0.6s ease' }} />
+                </div>
+                {/* Badges */}
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: 'var(--c-text-secondary)' }}>
+                    <span style={{ color: '#F59E0B' }}>🔥</span> Streak: <strong style={{ color: 'var(--c-text)' }}>{hs.streak.current}</strong>
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--c-text-secondary)' }}>
+                    🏆 Best: <strong style={{ color: 'var(--c-text)' }}>{hs.streak.best}</strong>
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--c-text-secondary)' }}>
+                    ✓ {hs.completedDays}/{hs.totalDays} days
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

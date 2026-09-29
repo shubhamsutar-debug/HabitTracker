@@ -1,21 +1,12 @@
 import { useState, useCallback } from 'react'
 import { Plus, Pencil, Archive, Trash2, GripVertical, RotateCcw } from 'lucide-react'
 import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  KeyboardSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
 import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-  arrayMove,
+  SortableContext, sortableKeyboardCoordinates, useSortable,
+  verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useHabits } from '../../hooks/useHabits'
@@ -27,190 +18,133 @@ import { EmptyState } from '../../components/EmptyState'
 import { Header } from '../../components/Header'
 import type { Habit, HabitFormData } from '../../types'
 
-/* ─── Sortable habit row ─── */
-function SortableHabitRow({
-  habit,
-  onEdit,
-  onArchive,
-}: {
-  habit: Habit
-  onEdit: (h: Habit) => void
-  onArchive: (h: Habit) => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: habit.id,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-  }
+/* ── Sortable row ── */
+function SortableHabitRow({ habit, onEdit, onArchive }: { habit: Habit; onEdit: (h: Habit) => void; onArchive: (h: Habit) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id })
 
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={[
-        'flex items-center gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-2xl border transition-shadow',
-        isDragging
-          ? 'shadow-xl border-indigo-300 dark:border-indigo-600 opacity-80'
-          : 'border-slate-200 dark:border-slate-700 shadow-sm',
-      ].join(' ')}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 50 : undefined,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '13px 14px',
+        background: 'var(--c-card)',
+        border: `1px solid var(--c-border)`,
+        borderRadius: 14,
+        boxShadow: isDragging ? 'var(--shadow-md)' : 'var(--shadow-card)',
+        opacity: isDragging ? 0.85 : 1,
+      }}
     >
-      {/* Drag handle — only this area initiates drag */}
+      {/* Drag handle */}
       <button
         {...attributes}
         {...listeners}
         aria-label={`Drag to reorder ${habit.name}`}
-        className="touch-none text-slate-400 dark:text-slate-500 cursor-grab active:cursor-grabbing flex-shrink-0 p-1 -ml-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        style={{
+          background: 'none', border: 'none', padding: 4, cursor: 'grab',
+          color: 'var(--c-border)', flexShrink: 0,
+          touchAction: 'none', display: 'flex',
+        }}
       >
-        <GripVertical size={18} aria-hidden="true" />
+        <GripVertical size={16} aria-hidden="true" />
       </button>
 
       {/* Emoji */}
-      <span className="text-xl select-none flex-shrink-0" aria-hidden="true">
-        {habit.emoji}
-      </span>
+      <span style={{
+        width: 38, height: 38, borderRadius: 10,
+        background: 'var(--c-primary-light)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, flexShrink: 0, userSelect: 'none',
+      }} aria-hidden="true">{habit.emoji}</span>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate leading-snug">
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {habit.name}
         </p>
         {habit.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+          <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {habit.description}
           </p>
         )}
       </div>
 
       {/* Active badge */}
-      <span
-        className={[
-          'text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 hidden sm:inline-flex',
-          habit.active
-            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
-            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
-        ].join(' ')}
-      >
-        {habit.active ? 'Active' : 'Inactive'}
-      </span>
+      <span style={{
+        fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6,
+        background: habit.active ? 'var(--c-primary-light)' : 'var(--c-incomplete)',
+        color: habit.active ? 'var(--c-primary)' : 'var(--c-text-secondary)',
+        flexShrink: 0,
+      }}>{habit.active ? 'Active' : 'Inactive'}</span>
 
       {/* Actions */}
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        <button
-          onClick={() => onEdit(habit)}
-          aria-label={`Edit ${habit.name}`}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        >
-          <Pencil size={15} aria-hidden="true" />
-        </button>
-        <button
-          onClick={() => onArchive(habit)}
-          aria-label={`Archive ${habit.name}`}
-          className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        >
-          <Archive size={15} aria-hidden="true" />
-        </button>
+      <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+        {[
+          { icon: <Pencil size={14} />, label: `Edit ${habit.name}`, onClick: () => onEdit(habit), color: 'var(--c-text-secondary)' },
+          { icon: <Archive size={14} />, label: `Archive ${habit.name}`, onClick: () => onArchive(habit), color: 'var(--c-text-secondary)' },
+        ].map((btn, i) => (
+          <button
+            key={i}
+            onClick={btn.onClick}
+            aria-label={btn.label}
+            style={{
+              width: 34, height: 34, borderRadius: 8,
+              border: '1px solid var(--c-border)',
+              background: 'var(--c-card)',
+              color: btn.color, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >{btn.icon}</button>
+        ))}
       </div>
     </div>
   )
 }
 
-/* ─── Dialog state ─── */
-type DialogState =
-  | { type: 'none' }
-  | { type: 'add' }
-  | { type: 'edit'; habit: Habit }
-  | { type: 'archive'; habit: Habit }
-  | { type: 'delete'; habit: Habit }
+type DialogState = { type: 'none' } | { type: 'add' } | { type: 'edit'; habit: Habit } | { type: 'archive'; habit: Habit } | { type: 'delete'; habit: Habit }
 
-/* ─── Main Habits page ─── */
 export function Habits() {
-  const { habits, activeHabits, loading, addNewHabit, editHabit, archiveHabitById, deleteHabitById, reorder, reload } =
-    useHabits()
+  const { habits, activeHabits, loading, addNewHabit, editHabit, archiveHabitById, deleteHabitById, reorder, reload } = useHabits()
   const [dialog, setDialog] = useState<DialogState>({ type: 'none' })
   const [showArchived, setShowArchived] = useState(false)
 
-  const archivedHabits = habits.filter((h) => !!h.archivedAt)
+  const archivedHabits = habits.filter(h => !!h.archivedAt)
 
-  /* ─── dnd-kit sensors — supports mouse, touch AND keyboard ─── */
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      // Require a small movement before drag starts (prevents accidental drags on tap)
-      activationConstraint: { distance: 8 },
-    }),
-    useSensor(TouchSensor, {
-      // 200ms hold before drag starts on touch — feels natural on mobile
-      activationConstraint: { delay: 200, tolerance: 8 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event
-      if (!over || active.id === over.id) return
-      const oldIndex = activeHabits.findIndex((h) => h.id === active.id)
-      const newIndex = activeHabits.findIndex((h) => h.id === over.id)
-      if (oldIndex === -1 || newIndex === -1) return
-      const reordered = arrayMove(activeHabits, oldIndex, newIndex)
-      await reorder(reordered.map((h) => h.id))
-    },
-    [activeHabits, reorder],
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIdx = activeHabits.findIndex(h => h.id === active.id)
+    const newIdx = activeHabits.findIndex(h => h.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) return
+    await reorder(arrayMove(activeHabits, oldIdx, newIdx).map(h => h.id))
+  }, [activeHabits, reorder])
+
+  const handleAdd = useCallback(async (data: HabitFormData) => { await addNewHabit(data); setDialog({ type: 'none' }) }, [addNewHabit])
+  const handleEdit = useCallback(async (data: HabitFormData) => {
+    if (dialog.type !== 'edit') return
+    await editHabit(dialog.habit.id, data); setDialog({ type: 'none' })
+  }, [dialog, editHabit])
+
+  if (loading) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 32, height: 32, border: '3px solid var(--c-primary-light)', borderTopColor: 'var(--c-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   )
-
-  /* ─── Sheet handlers ─── */
-  const handleAdd = useCallback(
-    async (data: HabitFormData) => {
-      await addNewHabit(data)
-      setDialog({ type: 'none' })
-    },
-    [addNewHabit],
-  )
-
-  const handleEdit = useCallback(
-    async (data: HabitFormData) => {
-      if (dialog.type !== 'edit') return
-      await editHabit(dialog.habit.id, data)
-      setDialog({ type: 'none' })
-    },
-    [dialog, editHabit],
-  )
-
-  const handleArchiveConfirm = useCallback(async () => {
-    if (dialog.type !== 'archive') return
-    await archiveHabitById(dialog.habit.id)
-    setDialog({ type: 'none' })
-  }, [dialog, archiveHabitById])
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (dialog.type !== 'delete') return
-    await deleteHabitById(dialog.habit.id)
-    setDialog({ type: 'none' })
-  }, [dialog, deleteHabitById])
-
-  const handleUnarchive = useCallback(
-    async (habit: Habit) => {
-      await unarchiveHabit(habit.id)
-      await reload()
-    },
-    [reload],
-  )
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <Header
         title="My Habits"
         subtitle={`${activeHabits.length} active habit${activeHabits.length !== 1 ? 's' : ''}`}
@@ -218,14 +152,22 @@ export function Habits() {
           <button
             onClick={() => setDialog({ type: 'add' })}
             aria-label="Add habit"
-            className="w-9 h-9 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '0 14px', height: 36,
+              background: 'var(--c-primary)', color: '#FFF',
+              border: 'none', borderRadius: 10,
+              fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
           >
-            <Plus size={18} aria-hidden="true" />
+            <Plus size={15} aria-hidden="true" />
+            Add
           </button>
         }
       />
 
-      <div className="flex-1 px-4 pt-4 pb-nav max-w-2xl mx-auto w-full">
+      <div style={{ flex: 1, padding: '20px 16px', maxWidth: 680, margin: '0 auto', width: '100%' }} className="pb-nav">
         {activeHabits.length === 0 && archivedHabits.length === 0 ? (
           <EmptyState
             icon="🌱"
@@ -234,7 +176,13 @@ export function Habits() {
             action={
               <button
                 onClick={() => setDialog({ type: 'add' })}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '0 20px', height: 46,
+                  background: 'var(--c-primary)', color: '#FFF',
+                  border: 'none', borderRadius: 10,
+                  fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
               >
                 <Plus size={16} aria-hidden="true" />
                 Add Habit
@@ -242,84 +190,71 @@ export function Habits() {
             }
           />
         ) : (
-          <div className="space-y-2">
-            {activeHabits.length === 0 && (
-              <p className="text-sm text-center text-slate-500 dark:text-slate-400 py-4">
-                No active habits. Tap + to add one.
-              </p>
-            )}
-
-            {/* @dnd-kit sortable list */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(e) => void handleDragEnd(e)}
-            >
-              <SortableContext items={activeHabits.map((h) => h.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
-                  {activeHabits.map((habit) => (
-                    <SortableHabitRow
-                      key={habit.id}
-                      habit={habit}
-                      onEdit={(h) => setDialog({ type: 'edit', habit: h })}
-                      onArchive={(h) => setDialog({ type: 'archive', habit: h })}
-                    />
-                  ))}
-                </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={e => void handleDragEnd(e)}>
+              <SortableContext items={activeHabits.map(h => h.id)} strategy={verticalListSortingStrategy}>
+                {activeHabits.map(habit => (
+                  <SortableHabitRow
+                    key={habit.id}
+                    habit={habit}
+                    onEdit={h => setDialog({ type: 'edit', habit: h })}
+                    onArchive={h => setDialog({ type: 'archive', habit: h })}
+                  />
+                ))}
               </SortableContext>
             </DndContext>
 
-            {/* Drag hint */}
             {activeHabits.length > 1 && (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500 pt-1">
-                Hold &amp; drag <span aria-hidden="true">⠿</span> to reorder
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--c-text-secondary)', margin: '4px 0 0' }}>
+                Hold &amp; drag ⠿ to reorder
               </p>
             )}
 
-            {/* Archived section */}
+            {/* Archived */}
             {archivedHabits.length > 0 && (
-              <div className="pt-3">
+              <div style={{ marginTop: 12 }}>
                 <button
-                  onClick={() => setShowArchived((v) => !v)}
-                  className="w-full flex items-center gap-2 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
+                  onClick={() => setShowArchived(v => !v)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 0', background: 'none', border: 'none',
+                    color: 'var(--c-text-secondary)', fontSize: 13, fontWeight: 500,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
                 >
                   <Archive size={14} aria-hidden="true" />
-                  <span>{showArchived ? 'Hide' : 'Show'} archived ({archivedHabits.length})</span>
+                  {showArchived ? 'Hide' : 'Show'} archived ({archivedHabits.length})
                 </button>
-
                 {showArchived && (
-                  <div className="space-y-2 mt-1">
-                    {archivedHabits.map((habit) => (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {archivedHabits.map(habit => (
                       <div
                         key={habit.id}
-                        className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700"
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '12px 14px',
+                          background: 'var(--c-incomplete)',
+                          border: '1px solid var(--c-border)',
+                          borderRadius: 14, opacity: 0.7,
+                        }}
                       >
-                        <span className="text-xl select-none flex-shrink-0 opacity-50" aria-hidden="true">
-                          {habit.emoji}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 truncate line-through">
+                        <span style={{ fontSize: 18, flexShrink: 0 }} aria-hidden="true">{habit.emoji}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text-secondary)', margin: 0, textDecoration: 'line-through', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {habit.name}
                           </p>
                         </div>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium flex-shrink-0 hidden sm:inline-flex">
-                          Archived
-                        </span>
-                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                        <div style={{ display: 'flex', gap: 4 }}>
                           <button
-                            onClick={() => void handleUnarchive(habit)}
+                            onClick={() => void unarchiveHabit(habit.id).then(() => reload())}
                             aria-label={`Restore ${habit.name}`}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                          >
-                            <RotateCcw size={15} aria-hidden="true" />
-                          </button>
+                            style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--c-border)', background: 'var(--c-card)', color: 'var(--c-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          ><RotateCcw size={13} /></button>
                           <button
                             onClick={() => setDialog({ type: 'delete', habit })}
                             aria-label={`Delete ${habit.name}`}
-                            className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                          >
-                            <Trash2 size={15} aria-hidden="true" />
-                          </button>
+                            style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--c-border)', background: 'var(--c-card)', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          ><Trash2 size={13} /></button>
                         </div>
                       </div>
                     ))}
@@ -331,41 +266,30 @@ export function Habits() {
         )}
       </div>
 
-      {/* Sheets */}
       <Sheet open={dialog.type === 'add'} onClose={() => setDialog({ type: 'none' })} title="New Habit">
         <HabitForm onSubmit={handleAdd} onCancel={() => setDialog({ type: 'none' })} submitLabel="Add Habit" />
       </Sheet>
-
       <Sheet open={dialog.type === 'edit'} onClose={() => setDialog({ type: 'none' })} title="Edit Habit">
-        {dialog.type === 'edit' && (
-          <HabitForm
-            initial={dialog.habit}
-            onSubmit={handleEdit}
-            onCancel={() => setDialog({ type: 'none' })}
-            submitLabel="Save Changes"
-          />
-        )}
+        {dialog.type === 'edit' && <HabitForm initial={dialog.habit} onSubmit={handleEdit} onCancel={() => setDialog({ type: 'none' })} submitLabel="Save Changes" />}
       </Sheet>
-
-      {/* Confirm dialogs */}
       <ConfirmDialog
         open={dialog.type === 'archive'}
         title="Archive Habit"
         message={dialog.type === 'archive' ? `Archive "${dialog.habit.name}"? It disappears from daily tracking but your history is preserved.` : ''}
         confirmLabel="Archive"
-        onConfirm={() => void handleArchiveConfirm()}
+        onConfirm={() => { if (dialog.type === 'archive') { void archiveHabitById(dialog.habit.id).then(() => setDialog({ type: 'none' })) } }}
         onCancel={() => setDialog({ type: 'none' })}
       />
-
       <ConfirmDialog
         open={dialog.type === 'delete'}
         title="Delete Habit"
         message={dialog.type === 'delete' ? `Permanently delete "${dialog.habit.name}" and all its history? This cannot be undone.` : ''}
         confirmLabel="Delete"
         destructive
-        onConfirm={() => void handleDeleteConfirm()}
+        onConfirm={() => { if (dialog.type === 'delete') { void deleteHabitById(dialog.habit.id).then(() => setDialog({ type: 'none' })) } }}
         onCancel={() => setDialog({ type: 'none' })}
       />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

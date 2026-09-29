@@ -4,7 +4,6 @@ import { useTheme } from './hooks/useTheme'
 import { getSettings } from './db/settings'
 import { BottomNavigation } from './components/BottomNavigation'
 
-/* ── Lazy-loaded page bundles — each route is a separate chunk ── */
 const Today      = lazy(() => import('./pages/Today/Today').then(m => ({ default: m.Today })))
 const History    = lazy(() => import('./pages/History/History').then(m => ({ default: m.History })))
 const Statistics = lazy(() => import('./pages/Statistics/Statistics').then(m => ({ default: m.Statistics })))
@@ -12,25 +11,11 @@ const Habits     = lazy(() => import('./pages/Habits/Habits').then(m => ({ defau
 const Settings   = lazy(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
 const Onboarding = lazy(() => import('./pages/Onboarding/Onboarding').then(m => ({ default: m.Onboarding })))
 
-/* ── Shared page spinner (shown while a lazy chunk loads) ── */
 function PageSpinner() {
   return (
-    <div className="flex-1 flex items-center justify-center min-h-[50dvh]">
-      <div className="w-7 h-7 border-[3px] border-indigo-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}
-
-/* ── App splash screen (initial DB load) ── */
-function SplashScreen() {
-  return (
-    <div className="min-h-dvh flex items-center justify-center bg-white dark:bg-slate-900">
-      <div className="flex flex-col items-center gap-5">
-        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
-          <span className="text-white text-2xl font-bold" style={{ fontFamily: 'Poppins, sans-serif' }}>H</span>
-        </div>
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50dvh' }}>
+      <div style={{ width: 28, height: 28, border: '3px solid var(--c-primary-light)', borderTopColor: 'var(--c-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
@@ -39,34 +24,42 @@ type AppState = 'loading' | 'onboarding' | 'app'
 
 function AppShell() {
   const [state, setState] = useState<AppState>('loading')
-  useTheme() // syncs theme class to <html> on mount
+  useTheme()
 
   useEffect(() => {
     getSettings()
       .then(s => setState(s.onboardingCompleted ? 'app' : 'onboarding'))
-      .catch(() => setState('app')) // IndexedDB unavailable — still show app
+      .catch(() => setState('app'))
   }, [])
 
-  if (state === 'loading') return <SplashScreen />
+  if (state === 'loading') return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--c-bg)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+        <div style={{ width: 64, height: 64, background: 'var(--c-primary)', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(46,125,91,0.25)' }}>
+          <span style={{ color: '#FFF', fontSize: 26, fontWeight: 700, fontFamily: 'Poppins, sans-serif' }}>H</span>
+        </div>
+        <div style={{ width: 24, height: 24, border: '3px solid var(--c-primary-light)', borderTopColor: 'var(--c-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
 
-  if (state === 'onboarding') {
-    return (
-      <Suspense fallback={<PageSpinner />}>
-        <Onboarding onComplete={() => setState('app')} />
-      </Suspense>
-    )
-  }
+  if (state === 'onboarding') return (
+    <Suspense fallback={<PageSpinner />}>
+      <Onboarding onComplete={() => setState('app')} />
+    </Suspense>
+  )
 
   return (
-    <div className="flex flex-col min-h-dvh">
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <Suspense fallback={<PageSpinner />}>
         <Routes>
-          <Route path="/"        element={<Today />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/stats"   element={<Statistics />} />
-          <Route path="/habits"  element={<Habits />} />
+          <Route path="/"         element={<Today />} />
+          <Route path="/history"  element={<History />} />
+          <Route path="/stats"    element={<Statistics />} />
+          <Route path="/habits"   element={<Habits />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*"        element={<Navigate to="/" replace />} />
+          <Route path="*"         element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
       <BottomNavigation />

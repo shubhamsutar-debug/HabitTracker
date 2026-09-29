@@ -8,19 +8,10 @@ interface HabitCheckboxProps {
   label?: string
 }
 
-export function HabitCheckbox({
-  checked,
-  onChange,
-  disabled = false,
-  size = 'md',
-  label,
-}: HabitCheckboxProps) {
-  const sizes = {
-    sm: 'w-6 h-6',
-    md: 'w-7 h-7',
-    lg: 'w-8 h-8',
-  }
-  const iconSizes = { sm: 14, md: 16, lg: 18 }
+export function HabitCheckbox({ checked, onChange, disabled = false, size = 'md', label }: HabitCheckboxProps) {
+  const boxSize = { sm: 22, md: 24, lg: 28 }[size]
+  const iconSize = { sm: 12, md: 14, lg: 16 }[size]
+  const touchSize = 44
 
   return (
     <button
@@ -30,26 +21,46 @@ export function HabitCheckbox({
       aria-label={label ?? (checked ? 'Mark incomplete' : 'Mark complete')}
       disabled={disabled}
       onClick={onChange}
-      className={[
-        sizes[size],
-        'rounded-lg border-2 flex items-center justify-center flex-shrink-0',
-        'transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
-        checked
-          ? 'bg-indigo-600 border-indigo-600 shadow-sm shadow-indigo-200 dark:shadow-indigo-900'
-          : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-indigo-400',
-        disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer active:scale-95',
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      style={{
+        width: touchSize,
+        height: touchSize,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        flexShrink: 0,
+        opacity: disabled ? 0.4 : 1,
+        WebkitTapHighlightColor: 'transparent',
+      }}
     >
-      {checked && (
-        <Check
-          size={iconSizes[size]}
-          strokeWidth={3}
-          className="text-white animate-check"
-          aria-hidden="true"
-        />
-      )}
+      <span
+        style={{
+          width: boxSize,
+          height: boxSize,
+          borderRadius: 8,
+          border: checked ? `2px solid var(--c-primary)` : `2px solid var(--c-border)`,
+          background: checked ? 'var(--c-primary)' : 'var(--c-incomplete)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.15s ease',
+          transform: 'scale(1)',
+          flexShrink: 0,
+        }}
+      >
+        {checked && (
+          <Check
+            size={iconSize}
+            strokeWidth={3}
+            color="#FFFFFF"
+            className="animate-check"
+            aria-hidden="true"
+          />
+        )}
+      </span>
     </button>
   )
 }

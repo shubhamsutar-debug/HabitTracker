@@ -9,23 +9,51 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, right, left }: HeaderProps) {
   return (
-    <header
-      className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-800/70"
-      style={{ paddingTop: 'var(--safe-top)' }}
-    >
-      <div className="flex items-center gap-3 px-4 h-14 max-w-2xl mx-auto">
-        {left && <div className="flex-shrink-0">{left}</div>}
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 truncate leading-tight tracking-tight">
+    <header style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 30,
+      background: 'var(--c-card)',
+      borderBottom: '1px solid var(--c-border)',
+      paddingTop: 'var(--safe-top)',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '0 20px',
+        height: 56,
+        maxWidth: 1200,
+        margin: '0 auto',
+      }}>
+        {left && <div style={{ flexShrink: 0 }}>{left}</div>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{
+            fontSize: 16,
+            fontWeight: 600,
+            color: 'var(--c-text)',
+            margin: 0,
+            lineHeight: 1.2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
             {title}
           </h1>
           {subtitle && (
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+            <p style={{
+              fontSize: 11,
+              color: 'var(--c-text-secondary)',
+              margin: '1px 0 0',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
               {subtitle}
             </p>
           )}
         </div>
-        {right && <div className="flex-shrink-0">{right}</div>}
+        {right && <div style={{ flexShrink: 0 }}>{right}</div>}
       </div>
     </header>
   )

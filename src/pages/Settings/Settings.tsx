@@ -1,8 +1,5 @@
 import { useRef, useState } from 'react'
-import {
-  Sun, Moon, Monitor, Download, Upload, FileText,
-  Trash2, ChevronRight, Bell, BellOff, Send,
-} from 'lucide-react'
+import { Sun, Moon, Monitor, Download, Upload, FileText, Trash2, Bell, BellOff, Send, ChevronRight } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useSettings } from '../../hooks/useSettings'
 import { useNotifications } from '../../hooks/useNotifications'
@@ -20,130 +17,117 @@ const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: 'system',label: 'System',icon: Monitor },
 ]
 
-/* ── small reusable row ── */
-function SettingsRow({
-  icon,
-  iconBg,
-  label,
-  sub,
-  onClick,
-  destructive = false,
-  disabled = false,
-  right,
-}: {
-  icon: React.ReactNode
-  iconBg: string
-  label: string
-  sub?: string
-  onClick?: () => void
-  destructive?: boolean
-  disabled?: boolean
-  right?: React.ReactNode
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px 4px' }}>
+      {children}
+    </p>
+  )
+}
+
+function SettingsCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ background: 'var(--c-card)', border: '1px solid var(--c-border)', borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+      {children}
+    </div>
+  )
+}
+
+function SettingsRow({ icon, iconBg, label, sub, onClick, danger, disabled, right }: {
+  icon: React.ReactNode; iconBg: string; label: string; sub?: string
+  onClick?: () => void; danger?: boolean; disabled?: boolean; right?: React.ReactNode
 }) {
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag
       {...(onClick ? { type: 'button' as const, onClick, disabled } : {})}
-      className={[
-        'w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500',
-        onClick && !destructive ? 'hover:bg-slate-50 dark:hover:bg-slate-700/50' : '',
-        onClick && destructive ? 'hover:bg-red-50 dark:hover:bg-red-950/20' : '',
-        disabled ? 'opacity-50 cursor-not-allowed' : '',
-      ].join(' ')}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+        padding: '13px 16px', textAlign: 'left',
+        background: 'transparent', border: 'none',
+        cursor: onClick && !disabled ? 'pointer' : 'default',
+        fontFamily: 'inherit', opacity: disabled ? 0.5 : 1,
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => { if (onClick && !disabled) (e.currentTarget as HTMLElement).style.background = 'var(--c-bg)' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
     >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {icon}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${destructive ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
-          {label}
-        </p>
-        {sub && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{sub}</p>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: danger ? '#DC2626' : 'var(--c-text)', margin: 0 }}>{label}</p>
+        {sub && <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>{sub}</p>}
       </div>
-      {right ?? (onClick && <ChevronRight size={16} className="text-slate-400 flex-shrink-0" aria-hidden="true" />)}
+      {right ?? (onClick && <ChevronRight size={15} color="var(--c-border)" aria-hidden="true" />)}
     </Tag>
   )
 }
 
+function Divider() {
+  return <div style={{ height: 1, background: 'var(--c-border)', margin: '0 16px' }} />
+}
+
 export function Settings() {
   const { theme, setTheme } = useTheme()
-  const { settings, update: updateSettings } = useSettings()
+  const { settings, update } = useSettings()
   const notifications = useNotifications(settings?.notificationsEnabled ?? false)
-
-  const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const [importError, setImportError]   = useState<string | null>(null)
-  const [importSuccess, setImportSuccess] = useState(false)
+  const [showClear, setShowClear] = useState(false)
+  const [importErr, setImportErr] = useState<string | null>(null)
+  const [importOk, setImportOk] = useState(false)
   const [busy, setBusy] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  /* ── data handlers ── */
-  const handleExportJSON = async () => {
-    try { await exportBackupJSON() }
-    catch (e) { alert(e instanceof Error ? e.message : 'Export failed.') }
-  }
-
-  const handleExportCSV = async () => {
-    try { await exportCSV() }
-    catch (e) { alert(e instanceof Error ? e.message : 'Export failed.') }
-  }
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImportError(null)
-    setImportSuccess(false)
-    setBusy(true)
+    const file = e.target.files?.[0]; if (!file) return
+    setImportErr(null); setImportOk(false); setBusy(true)
     try {
       const text = await readFileAsText(file)
       const backup = parseBackup(text)
       await restoreHabits(backup.habits)
       await restoreLogs(backup.habitLogs)
       if (backup.settings) await restoreSettings(backup.settings)
-      setImportSuccess(true)
-      setTimeout(() => { window.location.reload() }, 1500)
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'Import failed.')
-    } finally {
-      setBusy(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
+      setImportOk(true)
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (err) { setImportErr(err instanceof Error ? err.message : 'Import failed.') }
+    finally { setBusy(false); if (fileRef.current) fileRef.current.value = '' }
   }
 
-  const handleClearAll = async () => {
-    await clearAllData()
-    setShowClearConfirm(false)
-    window.location.reload()
-  }
+  const toggleStyle = (on: boolean) => ({
+    width: 46, height: 26, borderRadius: 13,
+    background: on ? 'var(--c-primary)' : 'var(--c-border)',
+    border: 'none', cursor: 'pointer', position: 'relative' as const,
+    transition: 'background 0.2s', flexShrink: 0,
+  })
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <Header title="Settings" />
+      <div style={{ flex: 1, padding: '20px 16px', maxWidth: 680, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 24 }} className="pb-nav">
 
-      <div className="flex-1 px-4 pt-5 pb-nav max-w-2xl mx-auto w-full space-y-6">
-
-        {/* ── Appearance ── */}
-        <section>
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
-            Appearance
-          </p>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700">
+        {/* Appearance */}
+        <div>
+          <SectionLabel>Appearance</SectionLabel>
+          <SettingsCard>
             {/* Theme */}
-            <div className="px-4 py-4">
-              <p className="text-sm font-medium text-slate-800 dark:text-slate-100 mb-3">Theme</p>
-              <div className="grid grid-cols-3 gap-2">
+            <div style={{ padding: '14px 16px 12px' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', margin: '0 0 10px' }}>Theme</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
                 {THEMES.map(({ value, label, icon: Icon }) => (
                   <button
                     key={value}
                     onClick={() => void setTheme(value)}
                     aria-pressed={theme === value}
-                    className={[
-                      'flex flex-col items-center gap-1.5 py-3 rounded-xl border-2 text-sm font-medium transition-all',
-                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
-                      theme === value
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300'
-                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500',
-                    ].join(' ')}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      padding: '12px 8px', borderRadius: 12,
+                      border: `2px solid ${theme === value ? 'var(--c-primary)' : 'var(--c-border)'}`,
+                      background: theme === value ? 'var(--c-primary-light)' : 'var(--c-card)',
+                      color: theme === value ? 'var(--c-primary)' : 'var(--c-text-secondary)',
+                      fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      transition: 'all 0.15s',
+                    }}
                   >
                     <Icon size={18} aria-hidden="true" />
                     {label}
@@ -151,68 +135,49 @@ export function Settings() {
                 ))}
               </div>
             </div>
-
+            <Divider />
             {/* Week start */}
-            <div className="px-4 py-3.5 flex items-center justify-between">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px' }}>
               <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Week starts on</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Affects history grid</p>
+                <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text)', margin: 0 }}>Week starts on</p>
+                <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>Affects history grid</p>
               </div>
-              <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-0.5">
-                {([{ label: 'Mon', val: 1 }, { label: 'Sun', val: 0 }] as const).map(({ label, val }) => (
+              <div style={{ display: 'flex', background: 'var(--c-incomplete)', borderRadius: 8, padding: 2 }}>
+                {([{ l: 'Mon', v: 1 }, { l: 'Sun', v: 0 }] as const).map(({ l, v }) => (
                   <button
-                    key={val}
-                    onClick={() => void updateSettings({ weekStartsOn: val })}
-                    aria-pressed={settings?.weekStartsOn === val}
-                    className={[
-                      'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
-                      settings?.weekStartsOn === val
-                        ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400',
-                    ].join(' ')}
-                  >
-                    {label}
-                  </button>
+                    key={v}
+                    onClick={() => void update({ weekStartsOn: v })}
+                    aria-pressed={settings?.weekStartsOn === v}
+                    style={{
+                      padding: '5px 12px', borderRadius: 6, border: 'none',
+                      background: settings?.weekStartsOn === v ? 'var(--c-card)' : 'transparent',
+                      color: settings?.weekStartsOn === v ? 'var(--c-text)' : 'var(--c-text-secondary)',
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      boxShadow: settings?.weekStartsOn === v ? 'var(--shadow-card)' : 'none',
+                    }}
+                  >{l}</button>
                 ))}
               </div>
             </div>
-          </div>
-        </section>
+          </SettingsCard>
+        </div>
 
-        {/* ── Notifications ── */}
-        <section>
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
-            Reminders
-          </p>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700">
+        {/* Reminders */}
+        <div>
+          <SectionLabel>Reminders</SectionLabel>
+          <SettingsCard>
             {!notifications.supported ? (
-              <div className="px-4 py-4 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                  <BellOff size={16} className="text-slate-400" aria-hidden="true" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Not supported</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Your browser doesn't support push notifications.
-                  </p>
-                </div>
-              </div>
+              <SettingsRow icon={<BellOff size={16} color="var(--c-text-secondary)" />} iconBg="var(--c-incomplete)" label="Not supported" sub="Your browser doesn't support notifications." />
             ) : (
               <>
-                {/* Toggle row */}
-                <div className="px-4 py-3.5 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-                    <Bell size={16} className="text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Bell size={16} color="var(--c-primary)" aria-hidden="true" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Daily reminder</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {notifications.permission === 'denied'
-                        ? 'Blocked in browser settings'
-                        : notifications.permission === 'default'
-                        ? 'Tap to enable notifications'
-                        : 'Remind you to check your habits'}
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text)', margin: 0 }}>Daily reminder</p>
+                    <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>
+                      {notifications.permission === 'denied' ? 'Blocked in browser settings' : 'Remind you to check your habits'}
                     </p>
                   </div>
                   <button
@@ -221,131 +186,76 @@ export function Settings() {
                     aria-checked={notifications.enabled}
                     disabled={notifications.permission === 'denied'}
                     onClick={() => void notifications.toggle(!notifications.enabled)}
-                    className={[
-                      'relative inline-flex w-12 h-6 rounded-full transition-colors flex-shrink-0',
-                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
-                      notifications.enabled ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600',
-                      notifications.permission === 'denied' ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
-                    ].join(' ')}
+                    style={toggleStyle(notifications.enabled)}
                   >
-                    <span
-                      className={[
-                        'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200',
-                        notifications.enabled ? 'translate-x-6' : 'translate-x-0',
-                      ].join(' ')}
-                    />
+                    <span style={{
+                      position: 'absolute', top: 3, left: 3, width: 20, height: 20,
+                      borderRadius: '50%', background: '#FFF',
+                      transition: 'transform 0.2s',
+                      transform: notifications.enabled ? 'translateX(20px)' : 'translateX(0)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
                   </button>
                 </div>
-
-                {/* Test notification */}
                 {notifications.enabled && notifications.permission === 'granted' && (
-                  <SettingsRow
-                    icon={<Send size={16} className="text-purple-600 dark:text-purple-400" aria-hidden="true" />}
-                    iconBg="bg-purple-100 dark:bg-purple-900/40"
-                    label="Send test notification"
-                    sub="Preview how reminders look"
-                    onClick={notifications.sendTestNotification}
-                  />
+                  <>
+                    <Divider />
+                    <SettingsRow icon={<Send size={15} color="var(--c-primary)" />} iconBg="var(--c-primary-light)" label="Send test notification" sub="Preview how reminders look" onClick={notifications.sendTestNotification} />
+                  </>
                 )}
               </>
             )}
-          </div>
-        </section>
+          </SettingsCard>
+        </div>
 
-        {/* ── Data management ── */}
-        <section>
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
-            Data Management
-          </p>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden divide-y divide-slate-100 dark:divide-slate-700">
-            <SettingsRow
-              icon={<Download size={16} className="text-indigo-600 dark:text-indigo-400" aria-hidden="true" />}
-              iconBg="bg-indigo-100 dark:bg-indigo-900/40"
-              label="Export Backup"
-              sub="Save all habits & logs as JSON"
-              onClick={() => void handleExportJSON()}
-            />
-            <SettingsRow
-              icon={<Upload size={16} className="text-green-600 dark:text-green-400" aria-hidden="true" />}
-              iconBg="bg-green-100 dark:bg-green-900/40"
-              label={busy ? 'Importing…' : 'Import Backup'}
-              sub="Restore from a JSON backup file"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={busy}
-            />
-            <SettingsRow
-              icon={<FileText size={16} className="text-amber-600 dark:text-amber-400" aria-hidden="true" />}
-              iconBg="bg-amber-100 dark:bg-amber-900/40"
-              label="Export CSV"
-              sub="Spreadsheet-compatible export"
-              onClick={() => void handleExportCSV()}
-            />
-            <SettingsRow
-              icon={<Trash2 size={16} className="text-red-600 dark:text-red-400" aria-hidden="true" />}
-              iconBg="bg-red-100 dark:bg-red-900/40"
-              label="Clear All Data"
-              sub="Delete all habits and logs"
-              onClick={() => setShowClearConfirm(true)}
-              destructive
-            />
-          </div>
+        {/* Data */}
+        <div>
+          <SectionLabel>Data Management</SectionLabel>
+          <SettingsCard>
+            <SettingsRow icon={<Download size={15} color="var(--c-primary)" />} iconBg="var(--c-primary-light)" label="Export Backup" sub="Save all habits & logs as JSON" onClick={() => void exportBackupJSON()} />
+            <Divider />
+            <SettingsRow icon={<Upload size={15} color="#059669" />} iconBg="#D1FAE5" label={busy ? 'Importing…' : 'Import Backup'} sub="Restore from a JSON backup file" onClick={() => fileRef.current?.click()} disabled={busy} />
+            <Divider />
+            <SettingsRow icon={<FileText size={15} color="#D97706" />} iconBg="#FEF3C7" label="Export CSV" sub="Spreadsheet-compatible export" onClick={() => void exportCSV()} />
+            <Divider />
+            <SettingsRow icon={<Trash2 size={15} color="#DC2626" />} iconBg="#FEE2E2" label="Clear All Data" sub="Delete all habits and logs" onClick={() => setShowClear(true)} danger />
+          </SettingsCard>
+          {importErr && <p role="alert" style={{ fontSize: 13, color: '#DC2626', margin: '8px 4px 0' }}>⚠️ {importErr}</p>}
+          {importOk && <p role="status" style={{ fontSize: 13, color: 'var(--c-primary)', margin: '8px 4px 0' }}>✓ Imported successfully. Reloading…</p>}
+        </div>
 
-          {importError && (
-            <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400 px-1">
-              ⚠️ {importError}
-            </p>
-          )}
-          {importSuccess && (
-            <p role="status" className="mt-2 text-sm text-green-600 dark:text-green-400 px-1">
-              ✓ Backup imported. Reloading…
-            </p>
-          )}
-        </section>
-
-        {/* ── About ── */}
-        <section>
-          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">
-            About
-          </p>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-base">H</span>
+        {/* About */}
+        <div>
+          <SectionLabel>About</SectionLabel>
+          <SettingsCard>
+            <div style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--c-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ color: '#FFF', fontWeight: 700, fontSize: 16 }}>H</span>
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)', margin: 0 }}>HabitTrack</p>
+                  <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '1px 0 0' }}>Version 1.0.0</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">HabitTrack</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Version 1.0.0</p>
-              </div>
+              <p style={{ fontSize: 13, color: 'var(--c-text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                All data lives on your device. No account, no cloud, no tracking. Works fully offline after installation.
+              </p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              All data lives on your device. No account, no cloud, no tracking.
-              Works fully offline after installation.
-            </p>
-          </div>
-        </section>
-
-        {/* bottom breathing room */}
-        <div className="h-2" />
+          </SettingsCard>
+        </div>
       </div>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json,application/json"
-        onChange={(e) => void handleImport(e)}
-        className="sr-only"
-        aria-label="Import backup file"
-      />
+      <input ref={fileRef} type="file" accept=".json,application/json" onChange={e => void handleImport(e)} className="sr-only" aria-label="Import backup file" />
 
       <ConfirmDialog
-        open={showClearConfirm}
+        open={showClear}
         title="Clear All Data"
         message="This will permanently delete all your habits, logs, and settings. This cannot be undone."
         confirmLabel="Clear Everything"
         destructive
-        onConfirm={() => void handleClearAll()}
-        onCancel={() => setShowClearConfirm(false)}
+        onConfirm={() => void clearAllData().then(() => window.location.reload())}
+        onCancel={() => setShowClear(false)}
       />
     </div>
   )

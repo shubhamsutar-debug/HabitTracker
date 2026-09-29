@@ -12,54 +12,45 @@ import { getTodayCompletion } from '../../utils/calculations'
 export function Today() {
   const navigate = useNavigate()
   const today = todayString()
-  const { activeHabits, loading: habitsLoading } = useHabits()
+  const { activeHabits, loading } = useHabits()
   const { logs, toggle } = useHabitLogsForDate(today)
 
-  const completion = useMemo(
-    () => getTodayCompletion(activeHabits, logs),
-    [activeHabits, logs],
-  )
-
+  const completion = useMemo(() => getTodayCompletion(activeHabits, logs), [activeHabits, logs])
   const allDone = completion.total > 0 && completion.completed === completion.total
 
-  const handleToggle = useCallback(
-    (habitId: string) => { void toggle(habitId, today) },
-    [toggle, today],
-  )
+  const handleToggle = useCallback((habitId: string) => { void toggle(habitId, today) }, [toggle, today])
+  const isCompleted = useCallback((habitId: string) => logs.some(l => l.habitId === habitId && l.completed), [logs])
 
-  const isCompleted = useCallback(
-    (habitId: string) => logs.some(l => l.habitId === habitId && l.completed),
-    [logs],
+  if (loading) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 32, height: 32, border: '3px solid var(--c-primary-light)', borderTopColor: 'var(--c-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
   )
-
-  if (habitsLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
 
   return (
-    <div className="flex-1 flex flex-col page-enter">
-      {/* ── Hero header ── */}
-      <div className="bg-white dark:bg-slate-900 px-5 pt-5 pb-5 border-b border-slate-100 dark:border-slate-800">
-        <div className="max-w-2xl mx-auto">
-          {/* Greeting */}
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-0.5 font-medium">
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} className="page-enter">
+      {/* ── Hero ── */}
+      <div style={{ background: 'var(--c-card)', borderBottom: '1px solid var(--c-border)', padding: '20px 20px 0' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          <p style={{ fontSize: 14, color: 'var(--c-text-secondary)', margin: '0 0 2px', fontWeight: 500 }}>
             {getGreeting()} 👋
           </p>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 tracking-tight">
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--c-text)', margin: '0 0 2px' }}>
             HabitTrack
           </h1>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
+          <p style={{ fontSize: 13, color: 'var(--c-text-secondary)', margin: '0 0 20px' }}>
             {formatFullDate(today)}
           </p>
 
           {/* Progress card */}
           {activeHabits.length > 0 && (
-            <div className="mt-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-700/50">
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">
+            <div style={{
+              background: 'var(--c-bg)',
+              border: '1px solid var(--c-border)',
+              borderRadius: '14px 14px 0 0',
+              padding: '16px 18px 18px',
+            }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--c-text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 12px' }}>
                 Today's Progress
               </p>
               <ProgressBar
@@ -73,22 +64,32 @@ export function Today() {
         </div>
       </div>
 
-      {/* ── Habit list ── */}
-      <div className="flex-1 px-4 pt-4 pb-nav max-w-2xl mx-auto w-full">
-        {/* All done banner */}
+      {/* ── List ── */}
+      <div style={{ flex: 1, padding: '20px 16px', maxWidth: 680, margin: '0 auto', width: '100%' }}
+        className="pb-nav">
+
+        {/* All done */}
         {allDone && (
-          <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 text-center">
-            <p className="text-2xl mb-1">🎉</p>
-            <p className="font-semibold text-indigo-700 dark:text-indigo-300 text-sm">
-              All habits completed!
-            </p>
-            <p className="text-xs text-indigo-600/60 dark:text-indigo-400/60 mt-0.5">
-              Great job. You kept your promise to yourself today.
-            </p>
+          <div style={{
+            background: 'var(--c-primary-light)',
+            border: '1px solid var(--c-primary)',
+            borderRadius: 14,
+            padding: '14px 18px',
+            marginBottom: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}>
+            <span style={{ fontSize: 24 }}>🎉</span>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-primary)', margin: 0 }}>All habits completed!</p>
+              <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>
+                Great job. You kept your promise to yourself today.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Empty state */}
         {activeHabits.length === 0 ? (
           <EmptyState
             icon="🌱"
@@ -97,7 +98,14 @@ export function Today() {
             action={
               <button
                 onClick={() => void navigate('/habits')}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '0 20px', height: 46,
+                  background: 'var(--c-primary)', color: '#FFF',
+                  border: 'none', borderRadius: 10,
+                  fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
               >
                 <Plus size={16} aria-hidden="true" />
                 Add Habit
@@ -105,7 +113,7 @@ export function Today() {
             }
           />
         ) : (
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {activeHabits.map(habit => (
               <HabitCard
                 key={habit.id}
@@ -117,6 +125,8 @@ export function Today() {
           </div>
         )}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

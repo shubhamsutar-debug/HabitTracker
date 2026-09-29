@@ -2,8 +2,8 @@ import { useState } from 'react'
 import type { HabitFormData } from '../../types'
 
 const EMOJI_SUGGESTIONS = [
-  '✅', '💪', '📚', '🏃', '💧', '🧘', '🚿', '💻', '💰', '📓',
-  '🚫', '📱', '☀️', '🥗', '😴', '🎯', '🎸', '✍️', '🧹', '🌿',
+  '✅','💪','📚','🏃','💧','🧘','🚿','💻','💰','📓',
+  '🚫','📵','☀️','🥗','😴','🎯','🎸','✍️','🧹','🌿',
 ]
 
 interface HabitFormProps {
@@ -14,163 +14,175 @@ interface HabitFormProps {
   loading?: boolean
 }
 
-export function HabitForm({
-  initial,
-  onSubmit,
-  onCancel,
-  submitLabel = 'Save',
-  loading = false,
-}: HabitFormProps) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [emoji, setEmoji] = useState(initial?.emoji ?? '✅')
+export function HabitForm({ initial, onSubmit, onCancel, submitLabel = 'Save', loading = false }: HabitFormProps) {
+  const [name, setName]               = useState(initial?.name ?? '')
+  const [emoji, setEmoji]             = useState(initial?.emoji ?? '✅')
   const [description, setDescription] = useState(initial?.description ?? '')
-  const [active, setActive] = useState(initial?.active ?? true)
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [active, setActive]           = useState(initial?.active ?? true)
+  const [error, setError]             = useState('')
+  const [submitting, setSubmitting]   = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (!name.trim()) {
-      setError('Habit name is required.')
-      return
-    }
+    if (!name.trim()) { setError('Habit name is required.'); return }
     setSubmitting(true)
-    try {
-      await onSubmit({ name: name.trim(), emoji, description: description.trim() || undefined, active })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.')
-    } finally {
-      setSubmitting(false)
-    }
+    try { await onSubmit({ name: name.trim(), emoji, description: description.trim() || undefined, active }) }
+    catch (err) { setError(err instanceof Error ? err.message : 'Something went wrong.') }
+    finally { setSubmitting(false) }
+  }
+
+  const inputStyle = {
+    width: '100%',
+    height: 44,
+    padding: '0 14px',
+    borderRadius: 10,
+    border: '1px solid var(--c-border)',
+    background: 'var(--c-bg)',
+    color: 'var(--c-text)',
+    fontSize: 14,
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 500,
+    color: 'var(--c-text-secondary)',
+    marginBottom: 6,
   }
 
   return (
-    <form onSubmit={(e) => void handleSubmit(e)} noValidate className="space-y-5">
+    <form onSubmit={(e) => void handleSubmit(e)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Emoji picker */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Icon
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {EMOJI_SUGGESTIONS.map((e) => (
+        <label style={labelStyle}>Icon</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {EMOJI_SUGGESTIONS.map(e => (
             <button
               key={e}
               type="button"
               onClick={() => setEmoji(e)}
               aria-label={`Select emoji ${e}`}
               aria-pressed={emoji === e}
-              className={[
-                'w-10 h-10 text-xl rounded-xl border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
-                emoji === e
-                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/50 scale-110'
-                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300',
-              ].join(' ')}
-            >
-              {e}
-            </button>
+              style={{
+                width: 40, height: 40, borderRadius: 10, fontSize: 18,
+                border: emoji === e ? '2px solid var(--c-primary)' : '2px solid var(--c-border)',
+                background: emoji === e ? 'var(--c-primary-light)' : 'var(--c-card)',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                transform: emoji === e ? 'scale(1.1)' : 'scale(1)',
+              }}
+            >{e}</button>
           ))}
         </div>
-        {/* Custom emoji input */}
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Custom:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>Custom:</span>
           <input
             type="text"
             value={emoji}
-            onChange={(e) => setEmoji(e.target.value.slice(0, 2))}
-            className="w-16 text-center text-xl border border-slate-200 dark:border-slate-700 rounded-lg py-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={e => setEmoji(e.target.value.slice(0, 2))}
             maxLength={2}
             aria-label="Custom emoji"
+            style={{ ...inputStyle, width: 60, textAlign: 'center', fontSize: 18, padding: 0 }}
           />
         </div>
       </div>
 
       {/* Name */}
       <div>
-        <label
-          htmlFor="habit-name"
-          className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
-        >
-          Habit name <span className="text-red-500" aria-hidden="true">*</span>
+        <label htmlFor="habit-name" style={labelStyle}>
+          Habit name <span aria-hidden="true" style={{ color: 'var(--c-danger)' }}>*</span>
         </label>
         <input
           id="habit-name"
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={e => setName(e.target.value)}
           placeholder="e.g. Morning run"
           required
           autoFocus
-          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+          style={inputStyle}
         />
-        {error && (
-          <p role="alert" className="mt-1.5 text-xs text-red-600 dark:text-red-400">
-            {error}
-          </p>
-        )}
+        {error && <p role="alert" style={{ fontSize: 12, color: 'var(--c-danger)', marginTop: 4 }}>{error}</p>}
       </div>
 
       {/* Description */}
       <div>
-        <label
-          htmlFor="habit-desc"
-          className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
-        >
-          Description <span className="text-xs font-normal text-slate-400">(optional)</span>
+        <label htmlFor="habit-desc" style={labelStyle}>
+          Description <span style={{ fontWeight: 400 }}>(optional)</span>
         </label>
         <input
           id="habit-desc"
           type="text"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={e => setDescription(e.target.value)}
           placeholder="e.g. 30 min minimum"
-          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+          style={inputStyle}
         />
       </div>
 
       {/* Active toggle */}
-      <div className="flex items-center justify-between py-1">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
         <div>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Active</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Show in daily tracking</p>
+          <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text)', margin: 0 }}>Active</p>
+          <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>Show in daily tracking</p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={active}
-          onClick={() => setActive((v) => !v)}
-          className={[
-            'relative inline-flex w-11 h-6 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
-            active ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600',
-          ].join(' ')}
+          onClick={() => setActive(v => !v)}
+          style={{
+            width: 48, height: 26, borderRadius: 13,
+            background: active ? 'var(--c-primary)' : 'var(--c-border)',
+            border: 'none', cursor: 'pointer', position: 'relative',
+            transition: 'background 0.2s', flexShrink: 0,
+          }}
         >
-          <span
-            className={[
-              'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
-              active ? 'translate-x-5' : 'translate-x-0',
-            ].join(' ')}
-          />
+          <span style={{
+            position: 'absolute', top: 3, left: 3,
+            width: 20, height: 20, borderRadius: '50%',
+            background: '#FFFFFF',
+            transition: 'transform 0.2s',
+            transform: active ? 'translateX(22px)' : 'translateX(0)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+          }} />
         </button>
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-1">
+      <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          >
-            Cancel
-          </button>
+            style={{
+              flex: 1, height: 46, borderRadius: 10,
+              border: '1px solid var(--c-border)',
+              background: 'var(--c-card)',
+              color: 'var(--c-text)',
+              fontSize: 14, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >Cancel</button>
         )}
         <button
           type="submit"
           disabled={submitting || loading}
-          className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-60"
-        >
-          {submitting ? 'Saving…' : submitLabel}
-        </button>
+          style={{
+            flex: 1, height: 46, borderRadius: 10, border: 'none',
+            background: 'var(--c-primary)',
+            color: '#FFFFFF',
+            fontSize: 14, fontWeight: 600,
+            cursor: submitting ? 'not-allowed' : 'pointer',
+            opacity: submitting ? 0.7 : 1,
+            fontFamily: 'inherit',
+            transition: 'opacity 0.15s',
+          }}
+        >{submitting ? 'Saving…' : submitLabel}</button>
       </div>
     </form>
   )

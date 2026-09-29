@@ -12,39 +12,70 @@ const navItems = [
 export function BottomNavigation() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80"
-      style={{ paddingBottom: 'var(--safe-bottom)' }}
       aria-label="Main navigation"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 40,
+        background: 'var(--c-card)',
+        borderTop: '1px solid var(--c-border)',
+        paddingBottom: 'var(--safe-bottom)',
+      }}
     >
-      <div className="flex items-stretch max-w-lg mx-auto h-[60px]">
+      <div style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        maxWidth: 480,
+        margin: '0 auto',
+        height: 'var(--nav-height)',
+      }}>
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            className={({ isActive }) =>
-              [
-                'flex-1 flex flex-col items-center justify-center gap-1 relative',
-                'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset',
-                isActive
-                  ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300',
-              ].join(' ')
-            }
             aria-label={label}
+            style={({ isActive }) => ({
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 3,
+              textDecoration: 'none',
+              color: isActive ? 'var(--c-primary)' : 'var(--c-text-secondary)',
+              transition: 'color 0.15s',
+              position: 'relative',
+            })}
           >
             {({ isActive }) => (
               <>
-                {/* Active indicator pip */}
                 {isActive && (
-                  <span className="absolute top-1.5 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+                  <span style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 24,
+                    height: 2.5,
+                    background: 'var(--c-primary)',
+                    borderRadius: '0 0 4px 4px',
+                  }} />
                 )}
                 <Icon
-                  size={22}
-                  strokeWidth={isActive ? 2.2 : 1.7}
+                  size={21}
+                  strokeWidth={isActive ? 2.2 : 1.8}
                   aria-hidden="true"
                 />
-                <span className="text-[9px] font-semibold tracking-wide leading-none uppercase">
+                <span style={{
+                  fontSize: 9,
+                  fontWeight: isActive ? 600 : 500,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  lineHeight: 1,
+                }}>
                   {label}
                 </span>
               </>

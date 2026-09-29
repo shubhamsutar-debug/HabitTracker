@@ -10,41 +10,69 @@ interface HabitCardProps {
 export function HabitCard({ habit, completed, onToggle }: HabitCardProps) {
   return (
     <div
-      className={[
-        'flex items-center gap-4 px-4 py-4 rounded-2xl border transition-all duration-200 active:scale-[0.99]',
-        completed
-          ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/70 shadow-sm shadow-indigo-100 dark:shadow-none'
-          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm shadow-slate-100 dark:shadow-none',
-      ].join(' ')}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '14px 16px',
+        background: 'var(--c-card)',
+        border: `1px solid ${completed ? 'var(--c-primary-light)' : 'var(--c-border)'}`,
+        borderRadius: 14,
+        borderLeft: completed ? '3px solid var(--c-primary)' : '3px solid transparent',
+        boxShadow: 'var(--shadow-card)',
+        transition: 'border-color 0.2s, box-shadow 0.2s',
+      }}
     >
-      {/* Emoji */}
+      {/* Emoji bubble */}
       <span
-        className="text-2xl select-none flex-shrink-0 leading-none"
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          background: 'var(--c-primary-light)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 20,
+          flexShrink: 0,
+          userSelect: 'none',
+        }}
         aria-hidden="true"
       >
         {habit.emoji}
       </span>
 
-      {/* Name + description */}
-      <div className="flex-1 min-w-0">
-        <p
-          className={[
-            'text-[15px] font-medium leading-snug transition-colors',
-            completed
-              ? 'text-indigo-700 dark:text-indigo-300'
-              : 'text-slate-800 dark:text-slate-100',
-          ].join(' ')}
-        >
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontSize: 15,
+          fontWeight: 500,
+          color: completed ? 'var(--c-text-secondary)' : 'var(--c-text)',
+          margin: 0,
+          lineHeight: 1.3,
+          textDecoration: completed ? 'none' : 'none',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          transition: 'color 0.2s',
+        }}>
           {habit.name}
         </p>
         {habit.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+          <p style={{
+            fontSize: 12,
+            color: 'var(--c-text-secondary)',
+            margin: '2px 0 0',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
             {habit.description}
           </p>
         )}
       </div>
 
-      {/* Checkbox — large tap target for one-hand mobile use */}
+      {/* Checkbox */}
       <HabitCheckbox
         checked={completed}
         onChange={() => onToggle(habit.id)}

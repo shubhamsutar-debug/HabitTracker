@@ -9,15 +9,44 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '56px 24px',
+      textAlign: 'center',
+    }}>
       {icon && (
-        <div className="text-5xl mb-4 select-none" aria-hidden="true">
+        <div style={{
+          width: 72,
+          height: 72,
+          background: 'var(--c-primary-light)',
+          borderRadius: 20,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 32,
+          marginBottom: 20,
+          userSelect: 'none',
+        }} aria-hidden="true">
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">{title}</h3>
+      <h3 style={{
+        fontSize: 17,
+        fontWeight: 600,
+        color: 'var(--c-text)',
+        margin: '0 0 8px',
+      }}>{title}</h3>
       {description && (
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xs">{description}</p>
+        <p style={{
+          fontSize: 14,
+          color: 'var(--c-text-secondary)',
+          margin: '0 0 24px',
+          maxWidth: 280,
+          lineHeight: 1.6,
+        }}>{description}</p>
       )}
       {action && <div>{action}</div>}
     </div>

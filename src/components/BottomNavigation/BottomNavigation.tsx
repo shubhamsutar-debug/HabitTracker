@@ -22,6 +22,9 @@ export function BottomNavigation() {
         background: 'var(--c-card)',
         borderTop: '1px solid var(--c-border)',
         paddingBottom: 'var(--safe-bottom)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.08)',
       }}
     >
       <div style={{
@@ -43,38 +46,68 @@ export function BottomNavigation() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 3,
+              gap: 4,
               textDecoration: 'none',
               color: isActive ? 'var(--c-primary)' : 'var(--c-text-secondary)',
-              transition: 'color 0.15s',
+              transition: 'color 0.2s ease',
               position: 'relative',
+              outline: 'none',
             })}
           >
             {({ isActive }) => (
               <>
+                {/* Active pill background */}
+                {isActive && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -54%)',
+                    width: 48,
+                    height: 34,
+                    borderRadius: 12,
+                    background: 'var(--c-primary-light)',
+                    zIndex: 0,
+                    animation: 'navPillIn 0.25s cubic-bezier(0.34,1.3,0.64,1)',
+                  }} />
+                )}
+
+                {/* Active indicator bar */}
                 {isActive && (
                   <span style={{
                     position: 'absolute',
                     top: 0,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: 24,
-                    height: 2.5,
-                    background: 'var(--c-primary)',
-                    borderRadius: '0 0 4px 4px',
+                    width: 28,
+                    height: 3,
+                    background: 'linear-gradient(90deg, #2E7D5B, #4CAF78)',
+                    borderRadius: '0 0 6px 6px',
+                    animation: 'navActiveSlide 0.25s ease',
                   }} />
                 )}
-                <Icon
-                  size={21}
-                  strokeWidth={isActive ? 2.2 : 1.8}
-                  aria-hidden="true"
-                />
+
+                <div style={{
+                  position: 'relative', zIndex: 1,
+                  transition: 'transform 0.2s cubic-bezier(0.34,1.3,0.64,1)',
+                  transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                }}>
+                  <Icon
+                    size={20}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                    aria-hidden="true"
+                  />
+                </div>
+
                 <span style={{
                   fontSize: 9,
-                  fontWeight: isActive ? 600 : 500,
-                  letterSpacing: '0.04em',
+                  fontWeight: isActive ? 700 : 500,
+                  letterSpacing: '0.06em',
                   textTransform: 'uppercase',
                   lineHeight: 1,
+                  position: 'relative',
+                  zIndex: 1,
+                  transition: 'font-weight 0.15s',
                 }}>
                   {label}
                 </span>
@@ -83,6 +116,13 @@ export function BottomNavigation() {
           </NavLink>
         ))}
       </div>
+
+      <style>{`
+        @keyframes navPillIn {
+          from { opacity: 0; transform: translate(-50%, -54%) scale(0.7); }
+          to   { opacity: 1; transform: translate(-50%, -54%) scale(1); }
+        }
+      `}</style>
     </nav>
   )
 }

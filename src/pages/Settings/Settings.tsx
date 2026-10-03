@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
-import { Sun, Moon, Monitor, Download, Upload, FileText, Trash2, Bell, BellOff, Send, ChevronRight } from 'lucide-react'
+import { Sun, Moon, Monitor, Download, Upload, FileText, Trash2, Bell, BellOff, Send, ChevronRight, Zap } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { useSettings } from '../../hooks/useSettings'
 import { useNotifications } from '../../hooks/useNotifications'
 import { Header } from '../../components/Header'
+import { Logo } from '../../components/Logo'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { restoreHabits } from '../../db/habits'
 import { restoreLogs } from '../../db/logs'
@@ -224,19 +225,59 @@ export function Settings() {
           {importOk && <p role="status" style={{ fontSize: 13, color: 'var(--c-primary)', margin: '8px 4px 0' }}>✓ Imported successfully. Reloading…</p>}
         </div>
 
+        {/* Notification Schedule Info */}
+        {notifications.enabled && (
+          <div>
+            <SectionLabel>Notification Schedule</SectionLabel>
+            <SettingsCard>
+              <div style={{ padding: '14px 16px' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Zap size={14} color="#F59E0B" /> 7 Daily Reminders Active
+                </p>
+                {[
+                  { time: '7:00 AM', label: 'Morning Kickstart', emoji: '🌅' },
+                  { time: '10:00 AM', label: 'Mid-Morning Nudge', emoji: '⏰' },
+                  { time: '1:00 PM', label: 'Post-Lunch Reminder', emoji: '🍱' },
+                  { time: '4:00 PM', label: 'Afternoon Hustle', emoji: '💪' },
+                  { time: '7:00 PM', label: 'Evening Check-In', emoji: '🌆' },
+                  { time: '9:00 PM', label: 'Pre-Accountability Warning', emoji: '⚠️' },
+                  { time: '11:00 PM', label: 'Final Accountability', emoji: '🌙' },
+                ].map(({ time, label, emoji }) => (
+                  <div key={time} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--c-border)' }}>
+                    <span style={{ fontSize: 16 }}>{emoji}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-primary)', width: 64, flexShrink: 0 }}>{time}</span>
+                    <span style={{ fontSize: 12, color: 'var(--c-text-secondary)' }}>{label}</span>
+                  </div>
+                ))}
+                <p style={{ fontSize: 11, color: 'var(--c-text-secondary)', margin: '10px 0 0', lineHeight: 1.5 }}>
+                  At 11pm, the app will automatically open an accountability check if you have incomplete habits.
+                </p>
+              </div>
+            </SettingsCard>
+          </div>
+        )}
+
         {/* About */}
         <div>
           <SectionLabel>About</SectionLabel>
           <SettingsCard>
-            <div style={{ padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--c-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ color: '#FFF', fontWeight: 700, fontSize: 16 }}>H</span>
-                </div>
+            <div style={{ padding: '18px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+                <Logo size={46} animate />
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)', margin: 0 }}>HabitTrack</p>
-                  <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '1px 0 0' }}>Version 1.0.0</p>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)', margin: 0, letterSpacing: '-0.02em' }}>
+                    Habit<span style={{ color: 'var(--c-primary)' }}>Track</span>
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>Version 1.0.0 · Build Better Days</p>
                 </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                {[['🔒', 'Private'], ['📱', 'Offline'], ['🆓', 'Free']].map(([icon, label]) => (
+                  <div key={label} style={{ textAlign: 'center', padding: '10px 6px', background: 'var(--c-bg)', borderRadius: 10, border: '1px solid var(--c-border)' }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{icon}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-text-secondary)' }}>{label}</div>
+                  </div>
+                ))}
               </div>
               <p style={{ fontSize: 13, color: 'var(--c-text-secondary)', margin: 0, lineHeight: 1.6 }}>
                 All data lives on your device. No account, no cloud, no tracking. Works fully offline after installation.

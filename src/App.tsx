@@ -18,6 +18,7 @@ const Statistics = lazy(() => import('./pages/Statistics/Statistics').then(m => 
 const Habits     = lazy(() => import('./pages/Habits/Habits').then(m => ({ default: m.Habits })))
 const Settings   = lazy(() => import('./pages/Settings/Settings').then(m => ({ default: m.Settings })))
 const Onboarding = lazy(() => import('./pages/Onboarding/Onboarding').then(m => ({ default: m.Onboarding })))
+const Widget     = lazy(() => import('./pages/Widget/Widget').then(m => ({ default: m.Widget })))
 
 function PageSpinner() {
   return (
@@ -184,6 +185,7 @@ function AppShell() {
           <Route path="/stats"    element={<Statistics />} />
           <Route path="/habits"   element={<Habits />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/widget"   element={<Widget />} />
           <Route path="*"         element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

@@ -14,8 +14,8 @@ export default defineConfig({
         name: 'HabitTrack',
         short_name: 'HabitTrack',
         description: 'Offline personal habit tracker. Build consistency every day.',
-        theme_color: '#6366f1',
-        background_color: '#ffffff',
+        theme_color: '#2E7D5B',
+        background_color: '#0d2818',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
@@ -24,6 +24,22 @@ export default defineConfig({
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+        shortcuts: [
+          {
+            name: 'Today\'s Progress',
+            short_name: 'Widget',
+            description: 'Quick view of today\'s habits and streak',
+            url: '/widget',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Today\'s Habits',
+            short_name: 'Today',
+            description: 'Check off today\'s habits',
+            url: '/',
+            icons: [{ src: 'icons/icon-192.png', sizes: '192x192' }],
+          },
         ],
       },
       workbox: {

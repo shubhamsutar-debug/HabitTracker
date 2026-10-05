@@ -169,23 +169,84 @@ export function Settings() {
           <SettingsCard>
             {!notifications.supported ? (
               <SettingsRow icon={<BellOff size={16} color="var(--c-text-secondary)" />} iconBg="var(--c-incomplete)" label="Not supported" sub="Your browser doesn't support notifications." />
+            ) : notifications.permission === 'denied' ? (
+              /* ── Denied: user must go to browser settings ── */
+              <div style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <BellOff size={16} color="#DC2626" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#DC2626', margin: '0 0 4px' }}>Notifications Blocked</p>
+                    <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                      You blocked notifications for this site. To enable them:
+                    </p>
+                    <div style={{ background: 'var(--c-bg)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--c-border)' }}>
+                      {[
+                        'Tap the 🔒 lock icon in Chrome\'s address bar',
+                        'Tap "Site settings"',
+                        'Set Notifications → "Allow"',
+                        'Reload the app',
+                      ].map((step, i) => (
+                        <p key={i} style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: i === 0 ? 0 : '4px 0 0', display: 'flex', gap: 8 }}>
+                          <span style={{ color: 'var(--c-primary)', fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+                          {step}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : notifications.permission === 'default' ? (
+              /* ── Not asked yet: show Enable button ── */
+              <div style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Bell size={16} color="var(--c-primary)" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-text)', margin: 0 }}>Enable Reminders</p>
+                    <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>
+                      Get 7 daily nudges to stay consistent
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void notifications.toggle(true)}
+                  style={{
+                    width: '100%', height: 46, borderRadius: 12, border: 'none',
+                    background: 'linear-gradient(135deg, #1a5c3e, #2E7D5B, #4CAF78)',
+                    color: '#FFF', fontSize: 14, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    boxShadow: '0 4px 16px rgba(46,125,91,0.35)',
+                  }}
+                >
+                  <Bell size={16} />
+                  Allow Notifications
+                </button>
+                <p style={{ fontSize: 11, color: 'var(--c-text-secondary)', textAlign: 'center', margin: '8px 0 0' }}>
+                  Chrome will ask you to confirm. Tap "Allow".
+                </p>
+              </div>
             ) : (
+              /* ── Granted: show toggle + test ── */
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Bell size={16} color="var(--c-primary)" aria-hidden="true" />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text)', margin: 0 }}>Daily reminder</p>
-                    <p style={{ fontSize: 12, color: 'var(--c-text-secondary)', margin: '2px 0 0' }}>
-                      {notifications.permission === 'denied' ? 'Blocked in browser settings' : 'Remind you to check your habits'}
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-text)', margin: 0 }}>Daily Reminders</p>
+                    <p style={{ fontSize: 12, color: notifications.enabled ? 'var(--c-primary)' : 'var(--c-text-secondary)', margin: '2px 0 0', fontWeight: notifications.enabled ? 600 : 400 }}>
+                      {notifications.enabled ? '✓ 7 reminders active — 7am to 11pm' : 'Tap to activate daily reminders'}
                     </p>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={notifications.enabled}
-                    disabled={notifications.permission === 'denied'}
                     onClick={() => void notifications.toggle(!notifications.enabled)}
                     style={toggleStyle(notifications.enabled)}
                   >
@@ -198,10 +259,16 @@ export function Settings() {
                     }} />
                   </button>
                 </div>
-                {notifications.enabled && notifications.permission === 'granted' && (
+                {notifications.enabled && (
                   <>
                     <Divider />
-                    <SettingsRow icon={<Send size={15} color="var(--c-primary)" />} iconBg="var(--c-primary-light)" label="Send test notification" sub="Preview how reminders look" onClick={notifications.sendTestNotification} />
+                    <SettingsRow
+                      icon={<Send size={15} color="var(--c-primary)" />}
+                      iconBg="var(--c-primary-light)"
+                      label="Send test notification"
+                      sub="Tap to preview — confirm notifications are working"
+                      onClick={notifications.sendTestNotification}
+                    />
                   </>
                 )}
               </>

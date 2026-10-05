@@ -13,24 +13,54 @@ export interface UseNotificationsReturn {
   toggle: (on: boolean) => Promise<void>
 }
 
-// ─── Send a browser notification ───
-function sendNotif(title: string, body: string, tag: string, urgent = false) {
-  if (typeof window === 'undefined' || !('Notification' in window)) return
+// ─────────────────────────────────────────────────────────────────
+// Core sender — ALWAYS uses Service Worker on mobile Chrome/Android.
+// Falls back to new Notification() on desktop browsers that support it.
+// ─────────────────────────────────────────────────────────────────
+async function sendNotif(
+  title: string,
+  body: string,
+  tag: string,
+  requireInteraction = false,
+): Promise<void> {
+  if (typeof window === 'undefined') return
+  if (!('Notification' in window)) return
   if (window.Notification.permission !== 'granted') return
+
+  const options: NotificationOptions = {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag,
+    requireInteraction,
+    silent: false,
+    // @ts-expect-error — vibrate is valid on Android but not in the TS types
+    vibrate: [200, 100, 200],
+  }
+
+  // Service Worker path — required for Android Chrome
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      await reg.showNotification(title, options)
+      return
+    } catch (err) {
+      console.warn('[HabitTrack] SW notification failed, falling back:', err)
+    }
+  }
+
+  // Desktop fallback
   try {
-    new window.Notification(title, {
-      body,
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      tag,
-      requireInteraction: urgent,
-      silent: false,
-    })
-  } catch (_) { /* silent */ }
+    new window.Notification(title, options)
+  } catch (err) {
+    console.warn('[HabitTrack] Notification failed:', err)
+  }
 }
 
-// ─── Schedule helpers ───
-function getNextAlarmMs(hour: number, minute: number): number {
+// ─────────────────────────────────────────────────────────────────
+// Time helpers
+// ─────────────────────────────────────────────────────────────────
+function msUntil(hour: number, minute = 0): number {
   const now = new Date()
   const target = new Date(now)
   target.setHours(hour, minute, 0, 0)
@@ -38,164 +68,179 @@ function getNextAlarmMs(hour: number, minute: number): number {
   return target.getTime() - now.getTime()
 }
 
-// Notification schedule
-const MORNING_HOUR   = 7   // 7am  – Morning kickstart
-const MID_MORNING    = 10  // 10am – Halfway morning nudge
-const AFTERNOON_HOUR = 13  // 1pm  – Post-lunch reminder
-const MID_AFTERNOON  = 16  // 4pm  – Afternoon hustle
-const EVENING_HOUR   = 19  // 7pm  – Evening heads up
-const PRE_NIGHT      = 21  // 9pm  – Pre-accountability warning
-const EVENING_FINAL  = 23  // 11pm – Final accountability
-
+const TWENTY_FOUR_H = 24 * 60 * 60 * 1000
 const ACCOUNTABILITY_KEY = 'ht_accountability_date'
 
-const MORNING_MESSAGES = [
-  { title: '🌅 Rise & Grind!', body: "Today's habits are waiting. Start strong and own the day! 💪" },
-  { title: '☀️ New Day, New You!', body: "Your streak is on the line. Let's build it higher today! 🔥" },
-  { title: '🌄 Morning Champion!', body: "Successful people act first thing. Check your habits now!" },
+// ─────────────────────────────────────────────────────────────────
+// Message pools
+// ─────────────────────────────────────────────────────────────────
+const MORNING_MSGS = [
+  { title: '🌅 Rise & Grind!',       body: "Today's habits are waiting. Start strong and own the day! 💪" },
+  { title: '☀️ New Day, New You!',   body: 'Your streak is on the line. Build it higher today! 🔥' },
+  { title: '🌄 Morning Champion!',   body: 'Successful people act first. Check your habits now!' },
 ]
-
-const MIDDAY_MESSAGES = [
-  { title: '⏰ Midday Check-In', body: "How are your habits going? Don't let the day slip by! 🎯" },
-  { title: '🎯 Halfway There!', body: "You're past morning — time to knock out your habits! 💥" },
+const MIDMORNING_MSGS = [
+  { title: '⏰ Midday Check-In',     body: "How are your habits going? Don't let the day slip by! 🎯" },
+  { title: '🎯 Still Morning!',      body: "You're past breakfast — time to knock out your habits! 💥" },
 ]
-
-const AFTERNOON_MESSAGES = [
-  { title: '🌞 Afternoon Nudge', body: "Still some habits left? Best time to crush them is NOW!" },
-  { title: '💪 Power Hour Alert!', body: "Top performers don't skip. Check your habits and stay consistent!" },
+const AFTERNOON_MSGS = [
+  { title: '🍱 Post-Lunch Reminder', body: 'Afternoon is perfect for consistency! Get those habits done. 💪' },
+  { title: '🌞 Afternoon Nudge',     body: 'Best time to crush remaining habits is RIGHT NOW!' },
 ]
-
-const EVENING_MESSAGES = [
-  { title: '🌆 Evening Check', body: "Day's winding down. Seal those habits before it's too late! ⏳" },
-  { title: "🔔 Don't Break the Chain!", body: "Your streak depends on today's effort. Complete your habits! 🔥" },
+const MIDAFTERNOON_MSGS = [
+  { title: '💪 Power Hour Alert!',   body: "Top performers don't skip. Check your habits and stay consistent!" },
+  { title: '🚀 4pm Push!',           body: "A few habits left? Knock them out before evening hits! 🎯" },
+]
+const EVENING_MSGS = [
+  { title: '🌆 Evening Check',       body: "Day's winding down. Seal those habits before it's too late! ⏳" },
+  { title: "🔔 Don't Break the Chain!", body: 'Your streak depends on today. Complete your habits! 🔥' },
 ]
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-export function useNotificationScheduler(enabled: boolean, getIncompleteCount: () => number) {
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
-  const intervals = useRef<ReturnType<typeof setInterval>[]>([])
+// ─────────────────────────────────────────────────────────────────
+// Notification Scheduler Hook
+// Schedules 7 daily notifications when enabled.
+// Uses a stable ref for getIncompleteCount to avoid timer resets.
+// ─────────────────────────────────────────────────────────────────
+export function useNotificationScheduler(
+  enabled: boolean,
+  getIncompleteCount: () => number,
+) {
+  // Keep a stable ref so the scheduler timers always call the latest version
+  // without needing to be re-scheduled every time logs change.
+  const countRef = useRef(getIncompleteCount)
+  useEffect(() => { countRef.current = getIncompleteCount }, [getIncompleteCount])
 
-  const clearAll = useCallback(() => {
-    timers.current.forEach(clearTimeout)
-    intervals.current.forEach(clearInterval)
-    timers.current = []
-    intervals.current = []
-  }, [])
+  const timersRef    = useRef<ReturnType<typeof setTimeout>[]>([])
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([])
 
   useEffect(() => {
     if (!enabled) return
 
-    const schedule = [
-      // 7am – Morning
+    // Clear any previous timers
+    timersRef.current.forEach(clearTimeout)
+    intervalsRef.current.forEach(clearInterval)
+    timersRef.current = []
+    intervalsRef.current = []
+
+    type Slot = { hour: number; minute?: number; send: () => void }
+
+    const slots: Slot[] = [
+      // 7:00am – Morning kickstart
       {
-        hour: MORNING_HOUR, minute: 0,
+        hour: 7,
         send: () => {
-          const msg = pick(MORNING_MESSAGES)
-          sendNotif(msg.title, msg.body, 'ht-morning')
+          const m = pick(MORNING_MSGS)
+          void sendNotif(m.title, m.body, 'ht-morning')
         },
       },
-      // 10am – Mid morning
+      // 10:00am – Mid-morning nudge (only if habits left)
       {
-        hour: MID_MORNING, minute: 0,
+        hour: 10,
         send: () => {
-          const count = getIncompleteCount()
-          if (count > 0) {
-            const msg = pick(MIDDAY_MESSAGES)
-            sendNotif(msg.title, `${count} habit${count > 1 ? 's' : ''} left. ${msg.body}`, 'ht-midmorning')
-          }
+          const n = countRef.current()
+          if (n <= 0) return
+          const m = pick(MIDMORNING_MSGS)
+          void sendNotif(m.title, `${n} habit${n > 1 ? 's' : ''} left. ${m.body}`, 'ht-midmorning')
         },
       },
-      // 1pm – Afternoon
+      // 1:00pm – Post-lunch
       {
-        hour: AFTERNOON_HOUR, minute: 0,
+        hour: 13,
         send: () => {
-          const count = getIncompleteCount()
-          if (count > 0) {
-            sendNotif('🍱 Post-Lunch Reminder', `${count} habit${count > 1 ? 's' : ''} pending. Afternoon is perfect for consistency! 💪`, 'ht-afternoon')
-          }
+          const n = countRef.current()
+          if (n <= 0) return
+          const m = pick(AFTERNOON_MSGS)
+          void sendNotif(m.title, `${n} habit${n > 1 ? 's' : ''} pending. ${m.body}`, 'ht-afternoon')
         },
       },
-      // 4pm – Mid afternoon
+      // 4:00pm – Mid-afternoon hustle
       {
-        hour: MID_AFTERNOON, minute: 0,
+        hour: 16,
         send: () => {
-          const count = getIncompleteCount()
-          if (count > 0) {
-            const msg = pick(AFTERNOON_MESSAGES)
-            sendNotif(msg.title, `Still ${count} habit${count > 1 ? 's' : ''} remaining! ${msg.body}`, 'ht-midafternoon')
-          }
+          const n = countRef.current()
+          if (n <= 0) return
+          const m = pick(MIDAFTERNOON_MSGS)
+          void sendNotif(m.title, `Still ${n} habit${n > 1 ? 's' : ''} remaining. ${m.body}`, 'ht-midafternoon')
         },
       },
-      // 7pm – Evening
+      // 7:00pm – Evening heads up
       {
-        hour: EVENING_HOUR, minute: 0,
+        hour: 19,
         send: () => {
-          const count = getIncompleteCount()
-          if (count > 0) {
-            const msg = pick(EVENING_MESSAGES)
-            sendNotif(msg.title, `${count} habit${count > 1 ? 's' : ''} not done yet! ${msg.body}`, 'ht-evening')
-          }
+          const n = countRef.current()
+          if (n <= 0) return
+          const m = pick(EVENING_MSGS)
+          void sendNotif(m.title, `${n} habit${n > 1 ? 's' : ''} not done yet. ${m.body}`, 'ht-evening')
         },
       },
-      // 9pm – Pre-accountability warning
+      // 9:00pm – Pre-accountability warning (requireInteraction=true on mobile)
       {
-        hour: PRE_NIGHT, minute: 0,
+        hour: 21,
         send: () => {
-          const count = getIncompleteCount()
-          if (count > 0) {
-            sendNotif(
-              '⚠️ Final Warning — 2 Hours Left!',
-              `You have ${count} incomplete habit${count > 1 ? 's' : ''}. At 11pm, HabitTrack will open for accountability. Act now! 🚨`,
-              'ht-prenight',
-              true
-            )
-          }
+          const n = countRef.current()
+          if (n <= 0) return
+          void sendNotif(
+            '⚠️ Final Warning — 2 Hours Left!',
+            `${n} incomplete habit${n > 1 ? 's' : ''}. At 11pm HabitTrack will ask you to complete or explain. Act now! 🚨`,
+            'ht-prenight',
+            true,
+          )
         },
       },
-      // 11pm – Final accountability
+      // 11:00pm – Final accountability push
       {
-        hour: EVENING_FINAL, minute: 0,
+        hour: 23,
         send: () => {
-          const count = getIncompleteCount()
-          if (count > 0) {
-            sendNotif(
-              '🌙 Accountability Time — Day Ends NOW',
-              `${count} habit${count > 1 ? 's' : ''} incomplete! Open HabitTrack to complete or explain. Your streak is at risk! 🔥`,
-              'ht-final',
-              true
-            )
-          }
+          const n = countRef.current()
+          if (n <= 0) return
+          void sendNotif(
+            '🌙 Accountability Time — Day Ends NOW',
+            `${n} habit${n > 1 ? 's' : ''} incomplete! Open HabitTrack to complete or explain. Streak at risk! 🔥`,
+            'ht-final',
+            true,
+          )
         },
       },
     ]
 
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
-
-    schedule.forEach(({ hour, minute, send }) => {
+    // For each slot, set a timeout to first fire, then an interval every 24h
+    for (const { hour, minute = 0, send } of slots) {
+      const delay = msUntil(hour, minute)
       const t = setTimeout(() => {
         send()
-        const interval = setInterval(send, TWENTY_FOUR_HOURS)
-        intervals.current.push(interval)
-      }, getNextAlarmMs(hour, minute))
-      timers.current.push(t)
-    })
+        const iv = setInterval(send, TWENTY_FOUR_H)
+        intervalsRef.current.push(iv)
+      }, delay)
+      timersRef.current.push(t)
+    }
 
-    return clearAll
-  }, [enabled, getIncompleteCount, clearAll])
+    return () => {
+      timersRef.current.forEach(clearTimeout)
+      intervalsRef.current.forEach(clearInterval)
+      timersRef.current = []
+      intervalsRef.current = []
+    }
+  }, [enabled]) // ← only re-runs if enabled changes; countRef stays live via the effect above
+
 }
 
-// ─── 11pm accountability modal trigger ───
+// ─────────────────────────────────────────────────────────────────
+// Accountability Check Hook — triggers the 11pm modal
+// ─────────────────────────────────────────────────────────────────
 export function useAccountabilityCheck(
   enabled: boolean,
   incompleteCount: number,
-  onTrigger: () => void
+  onTrigger: () => void,
 ) {
   const triggeredRef = useRef(false)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Keep onTrigger stable
+  const onTriggerRef = useRef(onTrigger)
+  useEffect(() => { onTriggerRef.current = onTrigger }, [onTrigger])
 
   useEffect(() => {
     if (!enabled || incompleteCount === 0) {
@@ -206,75 +251,87 @@ export function useAccountabilityCheck(
     const alreadyShownToday = localStorage.getItem(ACCOUNTABILITY_KEY) === todayString()
     if (alreadyShownToday) return
 
-    const now = new Date()
-    const currentHour = now.getHours()
+    const hour = new Date().getHours()
 
-    // If it's already 11pm or later — show immediately
-    if (currentHour >= EVENING_FINAL) {
+    // Already past 11pm — fire immediately
+    if (hour >= 23) {
       if (!triggeredRef.current) {
         triggeredRef.current = true
         localStorage.setItem(ACCOUNTABILITY_KEY, todayString())
-        onTrigger()
+        onTriggerRef.current()
       }
       return
     }
 
     // Schedule for 11pm
-    const msUntil11pm = getNextAlarmMs(EVENING_FINAL, 0)
+    if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => {
-      if (incompleteCount > 0 && !triggeredRef.current) {
+      if (!triggeredRef.current) {
         triggeredRef.current = true
         localStorage.setItem(ACCOUNTABILITY_KEY, todayString())
-        onTrigger()
+        onTriggerRef.current()
       }
-    }, msUntil11pm)
+    }, msUntil(23, 0))
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
-      if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [enabled, incompleteCount, onTrigger])
+  }, [enabled, incompleteCount]) // re-evaluates when count changes (e.g. user completes habits)
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Main useNotifications hook (used in Settings)
+// ─────────────────────────────────────────────────────────────────
 export function useNotifications(storedEnabled: boolean): UseNotificationsReturn {
   const supported =
     typeof window !== 'undefined' &&
     'Notification' in window &&
     'serviceWorker' in navigator
 
-  const [permission, setPermission] = useState<NotifPermission>(() => {
+  const getCurrentPermission = (): NotifPermission => {
     if (!supported) return 'unsupported'
-    return (window.Notification.permission as NotifPermission) ?? 'default'
-  })
+    return window.Notification.permission as NotifPermission
+  }
 
-  const [enabled, setEnabled] = useState(storedEnabled && permission === 'granted')
+  const [permission, setPermission] = useState<NotifPermission>(getCurrentPermission)
 
+  // ── FIX: sync enabled whenever storedEnabled OR permission changes ──
+  const [enabled, setEnabled] = useState(storedEnabled && getCurrentPermission() === 'granted')
   useEffect(() => {
-    if (!supported) return
-    setPermission(window.Notification.permission as NotifPermission)
-  }, [supported])
+    const perm = getCurrentPermission()
+    setPermission(perm)
+    setEnabled(storedEnabled && perm === 'granted')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storedEnabled])
 
   const requestPermission = useCallback(async (): Promise<NotifPermission> => {
     if (!supported) return 'unsupported'
     const result = await window.Notification.requestPermission()
-    setPermission(result as NotifPermission)
-    return result as NotifPermission
+    const perm = result as NotifPermission
+    setPermission(perm)
+    return perm
   }, [supported])
 
   const toggle = useCallback(async (on: boolean) => {
-    if (on && permission !== 'granted') {
-      const result = await requestPermission()
-      if (result !== 'granted') return
+    if (on) {
+      // Always re-request or check permission when turning on
+      const perm = getCurrentPermission()
+      if (perm !== 'granted') {
+        const result = await requestPermission()
+        if (result !== 'granted') return // user denied
+      }
     }
-    setEnabled(on)
-    await updateSettings({ notificationsEnabled: on })
-  }, [permission, requestPermission])
+    const newEnabled = on && getCurrentPermission() === 'granted'
+    setEnabled(newEnabled)
+    await updateSettings({ notificationsEnabled: newEnabled })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestPermission])
 
   const sendTestNotification = useCallback(() => {
-    sendNotif(
-      '🔥 HabitTrack Test',
-      "Notifications are ON! You'll receive 7 daily reminders to stay consistent. Let's go! 💪",
-      'ht-test'
+    void sendNotif(
+      '🔥 HabitTrack — Test Notification',
+      "Notifications are working! You'll get 7 daily reminders to stay consistent. Let's go! 💪",
+      'ht-test',
     )
   }, [])
 
